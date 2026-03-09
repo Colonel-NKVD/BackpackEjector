@@ -1,0 +1,2 @@
+- name: Build BackpackEjector
+  run: msbuild BackpackEjector/BackpackEjector.csproj /p:Configuration=Release
