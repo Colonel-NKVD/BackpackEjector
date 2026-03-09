@@ -13,7 +13,6 @@ namespace BackpackEjector
 {
     public class BackpackEjector : RocketPlugin<BackpackEjectorConfiguration>
     {
-        // Метод из твоего InventoryGuard для корректной подгрузки библиотек
         static BackpackEjector()
         {
             AppDomain.CurrentDomain.AssemblyResolve += (sender, args) =>
@@ -26,48 +25,58 @@ namespace BackpackEjector
 
         protected override void Load()
         {
-            Rocket.Core.Logging.Logger.Log("###############################");
-            Rocket.Core.Logging.Logger.Log("BackpackEjector: МОНИТОРИНГ РЮКЗАКА ЗАПУЩЕН!");
-            Rocket.Core.Logging.Logger.Log("###############################");
-
+            Rocket.Core.Logging.Logger.Log("BackpackEjector: СИСТЕМА ВЫБРОСА АКТИВИРОВАНА");
             UnturnedPlayerEvents.OnPlayerDeath += OnPlayerDeath;
         }
 
         protected override void Unload()
         {
             UnturnedPlayerEvents.OnPlayerDeath -= OnPlayerDeath;
-            Rocket.Core.Logging.Logger.Log("BackpackEjector: Плагин выгружен.");
         }
 
         private void OnPlayerDeath(UnturnedPlayer player, EDeathCause cause, ELimb limb, CSteamID murderer)
         {
             if (Configuration.Instance == null || !Configuration.Instance.Enabled) return;
 
-            // В Unturned: 0-1 Оружие, 2 Руки, 3-5 Одежда, 6 РЮКЗАК, 7 ЖИЛЕТ
-            const byte backpackPage = 6; 
+            // Используем стандартный класс инвентаря из Unturned напрямую
+            PlayerInventory inventory = player.Player.inventory;
+            
+            // Индекс рюкзака в современных версиях Unturned — это PlayerInventory.BACKPACK (6)
+            byte backpackPage = PlayerInventory.BACKPACK; 
 
-            // Безопасная проверка: одет ли рюкзак вообще
-            if (player.Inventory.items.Length <= backpackPage) return;
+            // Проверяем, есть ли у игрока вообще страница рюкзака
+            if (inventory.items == null || inventory.items.Length <= backpackPage) return;
 
-            var backpackItems = player.Inventory.items[backpackPage];
+            Items backpackItems = inventory.items[backpackPage];
 
             if (backpackItems != null && backpackItems.getItemCount() > 0)
             {
-                Rocket.Core.Logging.Logger.Log($"[Ejector] Игрок {player.CharacterName} погиб. Выбрасываем содержимое рюкзака.");
+                Rocket.Core.Logging.Logger.Log($"[Ejector] Игрок {player.CharacterName} погиб. В рюкзаке предметов: {backpackItems.getItemCount()}");
 
-                // Обратный цикл удаления (как в твоем примере), чтобы не ломать индексы
+                // Позиция для спавна предметов (чуть выше земли, чтобы не провалились)
+                Vector3 dropPosition = player.Position + new Vector3(0, 0.5f, 0);
+
+                // Цикл с конца (как в твоем InventoryGuard)
                 for (int i = backpackItems.getItemCount() - 1; i >= 0; i--)
                 {
-                    var jar = backpackItems.getItem((byte)i);
+                    ItemJar jar = backpackItems.getItem((byte)i);
                     if (jar != null && jar.item != null)
                     {
-                        // 1. Спавним предмет на земле в позиции игрока
-                        ItemManager.dropItem(jar.item, player.Position, false, true, true);
+                        // ВЫБРАСЫВАЕМ ПРЕДМЕТ
+                        // true в конце означает, что предмет будет лежать на земле как обычный лут
+                        ItemManager.dropItem(jar.item, dropPosition, false, true, true);
 
-                        // 2. Удаляем предмет из инвентаря трупа
-                        backpackItems.removeItem((byte)i);
+                        // УДАЛЯЕМ ИЗ ИНВЕНТАРЯ ТРУПА
+                        inventory.removeItem(backpackPage, (byte)i);
                     }
                 }
+                
+                // Принудительное обновление инвентаря для сервера
+                inventory.updateItems(backpackPage, backpackItems);
+            }
+            else 
+            {
+                Rocket.Core.Logging.Logger.Log($"[Ejector] У игрока {player.CharacterName} пустой рюкзак или его нет.");
             }
         }
     }
