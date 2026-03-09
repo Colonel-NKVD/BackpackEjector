@@ -1,57 +1,37 @@
-using System;
-using System.Collections.Generic;
 using Rocket.Core.Plugins;
 using Rocket.Unturned;
+using Rocket.Core.Logging;
 using Rocket.Unturned.Player;
 using SDG.Unturned;
-using UnityEngine;
-using Rocket.Core.Logging;
-using Steamworks; // Добавили эту строку
+using System;
 
 namespace BackpackEjector
 {
-    public class BackpackEjector : RocketPlugin<Rocket.API.IRocketPluginConfiguration>
+    public class BackpackEjector : RocketPlugin<BackpackEjectorConfiguration>
     {
         protected override void Load()
         {
-            PlayerLife.onPlayerDied += OnPlayerDied;
-            Rocket.Core.Logging.Logger.Log("BackpackEjector (Iron & Mud) успешно запущен!");
+            Logger.Log("###############################");
+            Logger.Log("BackpackEjector запущен успешно!");
+            Logger.Log("###############################");
+
+            // Подписываемся на смерть игрока
+            UnturnedPlayerEvents.OnPlayerDeath += OnPlayerDeath;
         }
 
         protected override void Unload()
         {
-            PlayerLife.onPlayerDied -= OnPlayerDied;
+            UnturnedPlayerEvents.OnPlayerDeath -= OnPlayerDeath;
+            Logger.Log("BackpackEjector выгружен.");
         }
 
-        private void OnPlayerDied(PlayerLife life, EDeathCause cause, ELimb limb, CSteamID killer)
+        private void OnPlayerDeath(UnturnedPlayer player, EDeathCause cause, ELimb limb, Steamworks.CSteamID murderer)
         {
-            if (life == null || life.player == null) return;
-
-            Player player = life.player;
-            PlayerInventory inventory = player.inventory;
-
-            byte backpackPage = PlayerInventory.BACKPACK;
-
-            if (inventory.items[backpackPage] == null) return;
-
-            var itemsInBackpack = inventory.items[backpackPage].items;
-            
-            if (itemsInBackpack == null || itemsInBackpack.Count == 0) return;
-
-            Vector3 deathPosition = player.transform.position;
-            List<ItemJar> toDrop = new List<ItemJar>(itemsInBackpack);
-
-            foreach (ItemJar jar in toDrop)
+            if (Configuration.Instance.Enabled)
             {
-                ItemManager.dropItem(jar.item, deathPosition, false, true, true);
+                // Пока просто пишем в консоль, что событие сработало
+                Logger.Log($"Игрок {player.CharacterName} умер. Система готова выкинуть рюкзак.");
             }
-
-            for (int i = (int)inventory.items[backpackPage].getItemCount() - 1; i >= 0; i--)
-            {
-                inventory.items[backpackPage].removeItem((byte)i);
-            }
-
-            Rocket.Core.Logging.Logger.Log($"Боец {player.channel.owner.playerID.playerName} пал. Содержимое рюкзака выброшено.");
         }
     }
 }
