@@ -13,7 +13,7 @@ namespace BackpackEjector
 {
     public class BackpackEjector : RocketPlugin<BackpackEjectorConfiguration>
     {
-        // Тот самый способ решения проблем с библиотеками через AssemblyResolve
+        // Метод из твоего InventoryGuard для корректной подгрузки библиотек
         static BackpackEjector()
         {
             AppDomain.CurrentDomain.AssemblyResolve += (sender, args) =>
@@ -26,37 +26,45 @@ namespace BackpackEjector
 
         protected override void Load()
         {
-            Rocket.Core.Logging.Logger.Log("BackpackEjector: Режим ВЫБРОСА рюкзака активен.");
+            Rocket.Core.Logging.Logger.Log("###############################");
+            Rocket.Core.Logging.Logger.Log("BackpackEjector: МОНИТОРИНГ РЮКЗАКА ЗАПУЩЕН!");
+            Rocket.Core.Logging.Logger.Log("###############################");
+
             UnturnedPlayerEvents.OnPlayerDeath += OnPlayerDeath;
         }
 
         protected override void Unload()
         {
             UnturnedPlayerEvents.OnPlayerDeath -= OnPlayerDeath;
+            Rocket.Core.Logging.Logger.Log("BackpackEjector: Плагин выгружен.");
         }
 
         private void OnPlayerDeath(UnturnedPlayer player, EDeathCause cause, ELimb limb, CSteamID murderer)
         {
             if (Configuration.Instance == null || !Configuration.Instance.Enabled) return;
 
-            // 2 — это индекс страницы рюкзака в инвентаре Unturned
-            const byte backpackPage = 2;
+            // В Unturned: 0-1 Оружие, 2 Руки, 3-5 Одежда, 6 РЮКЗАК, 7 ЖИЛЕТ
+            const byte backpackPage = 6; 
+
+            // Безопасная проверка: одет ли рюкзак вообще
+            if (player.Inventory.items.Length <= backpackPage) return;
+
             var backpackItems = player.Inventory.items[backpackPage];
 
             if (backpackItems != null && backpackItems.getItemCount() > 0)
             {
-                Rocket.Core.Logging.Logger.Log($"[Ejector] Выбрасываем содержимое рюкзака игрока {player.CharacterName}");
+                Rocket.Core.Logging.Logger.Log($"[Ejector] Игрок {player.CharacterName} погиб. Выбрасываем содержимое рюкзака.");
 
-                // Используем обратный цикл, как в твоем InventoryGuard, чтобы не сбить индексы
+                // Обратный цикл удаления (как в твоем примере), чтобы не ломать индексы
                 for (int i = backpackItems.getItemCount() - 1; i >= 0; i--)
                 {
                     var jar = backpackItems.getItem((byte)i);
-                    if (jar != null)
+                    if (jar != null && jar.item != null)
                     {
-                        // 1. Выбрасываем предмет на землю (как в твоем примере)
+                        // 1. Спавним предмет на земле в позиции игрока
                         ItemManager.dropItem(jar.item, player.Position, false, true, true);
 
-                        // 2. Удаляем из инвентаря
+                        // 2. Удаляем предмет из инвентаря трупа
                         backpackItems.removeItem((byte)i);
                     }
                 }
