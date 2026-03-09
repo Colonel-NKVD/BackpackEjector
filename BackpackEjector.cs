@@ -1,9 +1,11 @@
+using System;
 using Rocket.Core.Plugins;
 using Rocket.Unturned;
-using Rocket.Core.Logging;
 using Rocket.Unturned.Player;
+using Rocket.Unturned.Events;
+using Rocket.Core.Logging;
 using SDG.Unturned;
-using System;
+using Steamworks;
 
 namespace BackpackEjector
 {
@@ -12,25 +14,27 @@ namespace BackpackEjector
         protected override void Load()
         {
             Logger.Log("###############################");
-            Logger.Log("BackpackEjector запущен успешно!");
+            Logger.Log("BackpackEjector: Плагин успешно запущен!");
             Logger.Log("###############################");
 
-            // Подписываемся на смерть игрока
-            UnturnedPlayerEvents.OnPlayerDeath += OnPlayerDeath;
+            // Подписываемся на событие смерти через полный путь к классу
+            Rocket.Unturned.Events.UnturnedPlayerEvents.OnPlayerDeath += OnPlayerDeath;
         }
 
         protected override void Unload()
         {
-            UnturnedPlayerEvents.OnPlayerDeath -= OnPlayerDeath;
-            Logger.Log("BackpackEjector выгружен.");
+            // Отписываемся при выключении
+            Rocket.Unturned.Events.UnturnedPlayerEvents.OnPlayerDeath -= OnPlayerDeath;
+            Logger.Log("BackpackEjector: Плагин выгружен.");
         }
 
-        private void OnPlayerDeath(UnturnedPlayer player, EDeathCause cause, ELimb limb, Steamworks.CSteamID murderer)
+        private void OnPlayerDeath(UnturnedPlayer player, EDeathCause cause, ELimb limb, CSteamID murderer)
         {
-            if (Configuration.Instance.Enabled)
+            if (Configuration.Instance != null && Configuration.Instance.Enabled)
             {
-                // Пока просто пишем в консоль, что событие сработало
-                Logger.Log($"Игрок {player.CharacterName} умер. Система готова выкинуть рюкзак.");
+                Logger.Log($"[BackpackEjector] Игрок {player.CharacterName} погиб. Событие обработано.");
+                
+                // Здесь будет логика появления рюкзака на земле, если нужно
             }
         }
     }
