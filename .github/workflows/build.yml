@@ -1,10 +1,6 @@
-name: Build Plugins
-
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+- name: Build BackpackEjector
+      # Использование ключа **/*.csproj позволяет найти файл в любой подпапке
+      run: msbuild **/BackpackEjector.csproj /p:Configuration=Release /p:TargetFramework=net48
 
 jobs:
   build:
