@@ -14,18 +14,17 @@ jobs:
     - name: Build
       shell: pwsh
       run: |
-        # 1. Автоматически находим файл проекта
-        $proj = Get-ChildItem -Recurse -Filter "*.csproj" | Select-Object -First 1
-        if (!$proj) { throw "Файл .csproj не найден в репозитории!" }
-        $projPath = $proj.FullName
-        Write-Host "Выбран проект: $projPath"
-
-        # 2. Собираем проект (NuGet restore встроен в современные версии MSBuild /t:Restore)
-        msbuild $projPath /t:Restore /p:Configuration=Release /p:TargetFramework=net48
-        msbuild $projPath /p:Configuration=Release /p:TargetFramework=net48
+        # 1. Находим проект
+        $proj = Get-ChildItem -Filter "BackpackEjector.csproj" -Recurse | Select-Object -First 1
+        if (!$proj) { throw "Файл .csproj не найден!" }
+        
+        # 2. Собираем. Параметры внутри csproj сами направят файл в корень.
+        msbuild $proj.FullName /t:Restore /p:Configuration=Release
+        msbuild $proj.FullName /p:Configuration=Release
 
     - name: Upload DLL
       uses: actions/upload-artifact@v4
       with:
         name: BackpackEjector-Release
-        path: "**/bin/Release/net48/*.dll"
+        # Теперь берем файл прямо из корня репозитория
+        path: "BackpackEjector.dll"
