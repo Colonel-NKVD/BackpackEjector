@@ -1,2 +1,26 @@
-- name: Build BackpackEjector
-  run: msbuild BackpackEjector/BackpackEjector.csproj /p:Configuration=Release
+name: Build Plugins
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v2
+
+    - name: Build BackpackEjector
+      run: msbuild BackpackEjector/BackpackEjector.csproj /p:Configuration=Release /p:TargetFramework=net48
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: BackpackEjector-Plugin
+        path: BackpackEjector/bin/Release/net48/BackpackEjector.dll
