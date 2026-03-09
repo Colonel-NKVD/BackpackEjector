@@ -10,7 +10,7 @@ namespace BackpackEjector
         public void LoadDefaults()
         {
             Enabled = true;
-            EjectForce = 10f;
+            EjectForce = 15f;
         }
     }
 }
