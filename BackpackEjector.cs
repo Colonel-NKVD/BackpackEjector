@@ -1,56 +1,64 @@
 using System;
-using System.Collections.Generic;
+using System.Reflection;
+using Rocket.API;
 using Rocket.Core.Plugins;
 using Rocket.Unturned;
 using Rocket.Unturned.Player;
-using Rocket.Core.Logging;
+using Rocket.Unturned.Events;
 using SDG.Unturned;
-using Steamworks;
 using UnityEngine;
+using Steamworks;
 
 namespace BackpackEjector
 {
     public class BackpackEjector : RocketPlugin<BackpackEjectorConfiguration>
     {
+        // Тот самый способ решения проблем с библиотеками через AssemblyResolve
+        static BackpackEjector()
+        {
+            AppDomain.CurrentDomain.AssemblyResolve += (sender, args) =>
+            {
+                if (args.Name.Contains("Assembly-CSharp-firstpass"))
+                    return Assembly.GetAssembly(typeof(ItemJar));
+                return null;
+            };
+        }
+
         protected override void Load()
         {
-            Logger.Log("BackpackEjector: Система выброса вещей активирована!");
-            Rocket.Unturned.Events.UnturnedPlayerEvents.OnPlayerDeath += OnPlayerDeath;
+            Rocket.Core.Logging.Logger.Log("BackpackEjector: Режим ВЫБРОСА рюкзака активен.");
+            UnturnedPlayerEvents.OnPlayerDeath += OnPlayerDeath;
         }
 
         protected override void Unload()
         {
-            Rocket.Unturned.Events.UnturnedPlayerEvents.OnPlayerDeath -= OnPlayerDeath;
+            UnturnedPlayerEvents.OnPlayerDeath -= OnPlayerDeath;
         }
 
         private void OnPlayerDeath(UnturnedPlayer player, EDeathCause cause, ELimb limb, CSteamID murderer)
         {
-            // Проверяем, включен ли плагин в конфиге
             if (Configuration.Instance == null || !Configuration.Instance.Enabled) return;
 
-            // Индекс сумки (Backpack) в Unturned — это 2
-            byte backpackIndex = 2;
-            Items backpackItems = player.Inventory.getItemStack(backpackIndex);
+            // 2 — это индекс страницы рюкзака в инвентаре Unturned
+            const byte backpackPage = 2;
+            var backpackItems = player.Inventory.items[backpackPage];
 
             if (backpackItems != null && backpackItems.getItemCount() > 0)
             {
-                Logger.Log($"Выбрасываем {backpackItems.getItemCount()} предметов из рюкзака игрока {player.CharacterName}");
+                Rocket.Core.Logging.Logger.Log($"[Ejector] Выбрасываем содержимое рюкзака игрока {player.CharacterName}");
 
-                // Перебираем все вещи в рюкзаке
-                for (byte i = 0; i < backpackItems.getItemCount(); i++)
+                // Используем обратный цикл, как в твоем InventoryGuard, чтобы не сбить индексы
+                for (int i = backpackItems.getItemCount() - 1; i >= 0; i--)
                 {
-                    ItemJar itemJar = backpackItems.getItem(i);
-                    if (itemJar != null)
+                    var jar = backpackItems.getItem((byte)i);
+                    if (jar != null)
                     {
-                        // Создаем предмет в мире на месте смерти игрока
-                        ItemManager.dropItem(itemJar.item, player.Position, false, true, true);
-                    }
-                }
+                        // 1. Выбрасываем предмет на землю (как в твоем примере)
+                        ItemManager.dropItem(jar.item, player.Position, false, true, true);
 
-                // Очищаем инвентарь рюкзака, чтобы вещи не дублировались
-                for (byte i = 0; i < backpackItems.getItemCount(); i++)
-                {
-                    player.Inventory.removeItem(backpackIndex, 0);
+                        // 2. Удаляем из инвентаря
+                        backpackItems.removeItem((byte)i);
+                    }
                 }
             }
         }
