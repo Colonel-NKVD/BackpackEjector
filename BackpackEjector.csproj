@@ -2,12 +2,14 @@
   <PropertyGroup>
     <TargetFramework>net48</TargetFramework>
     <AssemblyName>BackpackEjector</AssemblyName>
-    <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
   </PropertyGroup>
 
   <ItemGroup>
     <Reference Include="Assembly-CSharp">
       <HintPath>libs\Assembly-CSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="com.rlabrecque.steamworks.net">
+      <HintPath>libs\com.rlabrecque.steamworks.net.dll</HintPath>
     </Reference>
     <Reference Include="Rocket.API">
       <HintPath>libs\Rocket.API.dll</HintPath>
